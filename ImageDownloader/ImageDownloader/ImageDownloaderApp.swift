@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import Networking
 
 @main
 struct ImageDownloaderApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            let networkMonitor = NetworkMonitor()
+            let imageDownloader = ImageDownloader()
+            let networkOperationPerformer = NetworkOperationPerformer(networkMonitor: networkMonitor)
+            ContentView(viewModel: ContentViewModel(networkOperationPerformer: networkOperationPerformer, imageDownloader: imageDownloader))
         }
     }
 }

@@ -1,13 +1,13 @@
 //
 //  MockNetworkMonitor.swift
+//  ImageDownloader
 //
-//
-//  Created by Piotr Torczynski on 19/07/2024.
+//  Created by Piotr Torczynski on 24/07/2024.
 //
 
-import Foundation
+import Networking
 
-@testable import Networking
+@testable import ImageDownloader
 
 class MockNetworkMonitor: NetworkMonitorProtocol {
     var isConnected: Bool = false

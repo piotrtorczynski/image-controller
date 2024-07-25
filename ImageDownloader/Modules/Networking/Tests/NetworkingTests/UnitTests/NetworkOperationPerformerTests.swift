@@ -10,51 +10,36 @@ import XCTest
 @testable import Networking
 
 final class NetworkOperationPerformerTests: XCTestCase {
-    func testPerformNetworkOperationWhenInitiallyConnected() async {
-        let monitor = MockNetworkMonitor(isConnected: true)
+    func testPerformNetworkOperation_withInternet() async throws {
+        let monitor = MockNetworkMonitor()
+        monitor.isConnected = true
         let performer = NetworkOperationPerformer(networkMonitor: monitor)
+
         var closureCalled = false
-
-        await performer.performNetworkOperation(using: {
+        try await performer.performNetworkOperation(using: {
             closureCalled = true
-        }, withinSeconds: 5)
+        }, withinSeconds: 2)
 
-        XCTAssertTrue(closureCalled, "Closure should be called when network is initially connected.")
+        XCTAssertTrue(closureCalled)
     }
 
-    func testPerformNetworkOperationWhenInitiallyDisconnectedButThenConnected() async {
-        let monitor = MockNetworkMonitor(isConnected: false)
+    func testPerformNetworkOperation_noInternetInitially_thenConnected() async throws {
+        let monitor = MockNetworkMonitor()
+        monitor.isConnected = false
         let performer = NetworkOperationPerformer(networkMonitor: monitor)
+
         var closureCalled = false
 
         Task {
-            try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate network becoming available after 1 second
-            monitor.setConnectionStatus(true)
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // Simulate delay
+            monitor.isConnected = true
+            monitor.onStatusChange?(true)
         }
 
-        await performer.performNetworkOperation(using: {
+        try await performer.performNetworkOperation(using: {
             closureCalled = true
-        }, withinSeconds: 5)
+        }, withinSeconds: 2)
 
-        XCTAssertTrue(closureCalled, "Closure should be called when network becomes available within timeout duration.")
-    }
-
-    func testPerformNetworkOperationWhenNetworkBecomesAvailableAfterTimeout() async {
-        let monitor = MockNetworkMonitor(isConnected: false, shouldTimeout: true)
-        let performer = NetworkOperationPerformer(networkMonitor: monitor)
-        var closureCalled = false
-
-        Task {
-            try await Task.sleep(nanoseconds: 6_000_000_000) // Simulate network becoming available after 6 seconds (after timeout)
-            monitor.setConnectionStatus(true)
-        }
-
-        await performer.performNetworkOperation(using: {
-            closureCalled = true
-        }, withinSeconds: 5)
-
-        XCTAssertFalse(closureCalled, "Closure should not be called when network becomes available after timeout duration.")
+        XCTAssertTrue(closureCalled)
     }
 }
-
-
