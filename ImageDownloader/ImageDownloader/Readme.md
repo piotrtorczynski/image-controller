@@ -88,6 +88,7 @@ private extension Notification.Name {
     static let networkStatusDidChange = Notification.Name("NetworkStatusDidChange")
 }
 
+
 let networkOperationClosure: () async -> SomeType = {
     // Long-lasting network operation.
     return result

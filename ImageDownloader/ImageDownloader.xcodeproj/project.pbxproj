@@ -15,6 +15,8 @@
 		73B494CE2C4A70B800EC4FFE /* ContentViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B494CD2C4A70B800EC4FFE /* ContentViewModelTests.swift */; };
 		73B494E82C4A716A00EC4FFE /* Networking in Resources */ = {isa = PBXBuildFile; fileRef = 73B494E62C4A716A00EC4FFE /* Networking */; };
 		73B494EB2C4A71A400EC4FFE /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = 73B494EA2C4A71A400EC4FFE /* Networking */; };
+		73BBCF452C52660C006E8587 /* Readme.md in Resources */ = {isa = PBXBuildFile; fileRef = 73BBCF442C52660C006E8587 /* Readme.md */; };
+		73BBCF472C528C1C006E8587 /* OldSolution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BBCF462C528C18006E8587 /* OldSolution.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +40,8 @@
 		73B494C92C4A70B800EC4FFE /* ImageDownloaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ImageDownloaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		73B494CD2C4A70B800EC4FFE /* ContentViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModelTests.swift; sourceTree = "<group>"; };
 		73B494E62C4A716A00EC4FFE /* Networking */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Networking; sourceTree = "<group>"; };
+		73BBCF442C52660C006E8587 /* Readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Readme.md; sourceTree = "<group>"; };
+		73BBCF462C528C18006E8587 /* OldSolution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OldSolution.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -106,9 +110,11 @@
 		73B494BA2C4A70B500EC4FFE /* ImageDownloader */ = {
 			isa = PBXGroup;
 			children = (
+				73BBCF462C528C18006E8587 /* OldSolution.swift */,
 				73B494BB2C4A70B500EC4FFE /* ImageDownloaderApp.swift */,
 				73B494BD2C4A70B500EC4FFE /* ContentView.swift */,
 				736E103C2C4F938000EF0E71 /* ContentViewModel.swift */,
+				73BBCF442C52660C006E8587 /* Readme.md */,
 				73B494BF2C4A70B700EC4FFE /* Assets.xcassets */,
 				73B494C12C4A70B700EC4FFE /* ImageDownloader.entitlements */,
 				73B494C22C4A70B700EC4FFE /* Preview Content */,
@@ -234,6 +240,7 @@
 			files = (
 				73B494E82C4A716A00EC4FFE /* Networking in Resources */,
 				73B494C42C4A70B700EC4FFE /* Preview Assets.xcassets in Resources */,
+				73BBCF452C52660C006E8587 /* Readme.md in Resources */,
 				73B494C02C4A70B700EC4FFE /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -252,6 +259,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				73BBCF472C528C1C006E8587 /* OldSolution.swift in Sources */,
 				73B494BE2C4A70B500EC4FFE /* ContentView.swift in Sources */,
 				73B494BC2C4A70B500EC4FFE /* ImageDownloaderApp.swift in Sources */,
 				736E103D2C4F938600EF0E71 /* ContentViewModel.swift in Sources */,

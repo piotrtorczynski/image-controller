@@ -6,25 +6,22 @@
 //
 
 import Networking
-
 @testable import ImageDownloader
 
 class MockNetworkMonitor: NetworkMonitorProtocol {
-    var isConnected: Bool = false
-    var onStatusChange: ((Bool) -> Void)?
+    var isConnected: Bool
 
-    func hasInternetConnection() -> Bool {
+    init(isConnected: Bool) {
+        self.isConnected = isConnected
+    }
+
+    func hasInternetConnection() async -> Bool {
         return isConnected
     }
 
-    func waitForConnection() async throws {
-        guard !isConnected else { return }
-        await withCheckedContinuation { continuation in
-            self.onStatusChange = { connected in
-                if connected {
-                    continuation.resume()
-                }
-            }
+    func waitForConnection() async {
+        while !isConnected {
+            try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1 seconds
         }
     }
 }

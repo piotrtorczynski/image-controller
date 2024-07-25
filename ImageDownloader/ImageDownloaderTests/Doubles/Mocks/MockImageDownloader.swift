@@ -9,16 +9,15 @@ import Foundation
 import UIKit
 @testable import Networking
 
-class MockImageDownloader: ImageDownloaderProtocol {
-    var shouldSucceed = true
-    var delay: TimeInterval = 0
+struct MockImageDownloader: ImageDownloaderProtocol {
+    let result: Result<UIImage, Error>
 
     func downloadImage(from url: URL) async throws -> UIImage {
-        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-        if shouldSucceed {
-            return UIImage()
-        } else {
-            throw URLError(.badURL)
+        switch result {
+        case .success(let image):
+            return image
+        case .failure(let error):
+            throw error
         }
     }
 }

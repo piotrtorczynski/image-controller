@@ -6,11 +6,11 @@
 //
 
 import Foundation
-import UIKit
 import Networking
+import UIKit
 
 @MainActor
-class ContentViewModel: ObservableObject {
+final class ContentViewModel: ObservableObject {
     enum State: Equatable {
         case loading
         case noNetwork
@@ -19,6 +19,7 @@ class ContentViewModel: ObservableObject {
     }
 
     @Published var state: State = .loading
+    private var currentTask: Task<Void, Never>?
 
     private let networkOperationPerformer: NetworkOperationPerformerProtocol
     private let imageDownloader: ImageDownloaderProtocol
@@ -28,40 +29,40 @@ class ContentViewModel: ObservableObject {
         self.imageDownloader = imageDownloader
     }
 
-    /// Starts loading the image while handling network state changes and timeouts.
-    func startLoading() async {
-        let noNetworkCheckTask = Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            if !(await networkOperationPerformer.hasInternetConnection()) {
-                self.state = .noNetwork
-            }
-        }
-
-        let timeoutTask = Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-            if case .loading = self.state {
-                self.state = .error("Image download timed out")
-            }
-        }
-
-        do {
-            try await networkOperationPerformer.performNetworkOperation(using: { [weak self] in
-                guard let self else { return }
-                do {
-                    let url = URL(string: "https://picsum.photos/id/16/200/300")!
-                    let downloadedImage = try await self.imageDownloader.downloadImage(from: url)
-                    self.state = .image(downloadedImage)
-                } catch {
-                    self.state = .error("Image download failed: \(error)")
+    func startLoading() {
+        currentTask?.cancel()
+        currentTask = Task {
+            // Show "No network connection" message if network is not available within 0.5 seconds
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                if !(await networkOperationPerformer.hasInternetConnection()) {
+                    self.state = .noNetwork
                 }
-            }, withinSeconds: 4)
-        } catch {
-            state = .error("Image download failed: \(error.localizedDescription)")
-        }
+            }
 
-        // Ensure the noNetwork check completes before evaluating final state
-        await noNetworkCheckTask.value
-        await timeoutTask.value
+            // Attempt to download the image with a 2-second timeout
+            do {
+                try await networkOperationPerformer.performNetworkOperation(using: { [weak self] in
+                    guard let self else { return }
+                    do {
+                        let url = URL(string: "https://picsum.photos/id/16/200/300")! // Replace with your image URL
+                        let downloadedImage = try await self.imageDownloader.downloadImage(from: url)
+                        self.state = .image(downloadedImage)
+                    } catch {
+                        self.state = .error("Image download failed: \(error)")
+                    }
+                }, withinSeconds: 2)
+            } catch {
+                state = .error("Image download failed: \(error.localizedDescription)")
+            }
+
+            if case .loading = state {
+                state = .error("Image download timed out")
+            }
+        }
+    }
+
+    func cancelLoading() {
+        currentTask?.cancel()
     }
 }
-
