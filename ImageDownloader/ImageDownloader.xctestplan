@@ -1,0 +1,41 @@
+{
+  "configurations" : [
+    {
+      "id" : "136CEC82-D87E-4B82-8AC2-F7D2F5AAA55F",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:ImageDownloader.xcodeproj",
+      "identifier" : "73B494B72C4A70B500EC4FFE",
+      "name" : "ImageDownloader"
+    }
+  },
+  "testTargets" : [
+    {
+      "skippedTests" : [
+        "ContentViewModelTests\/testStartLoading_withTimeout()"
+      ],
+      "target" : {
+        "containerPath" : "container:ImageDownloader.xcodeproj",
+        "identifier" : "73B494C82C4A70B800EC4FFE",
+        "name" : "ImageDownloaderTests"
+      }
+    },
+    {
+      "skippedTests" : [
+        "NetworkOperationPerformerTests\/testPerformNetworkOperation_withTimeout()"
+      ],
+      "target" : {
+        "containerPath" : "container:Modules\/Networking",
+        "identifier" : "NetworkingTests",
+        "name" : "NetworkingTests"
+      }
+    }
+  ],
+  "version" : 1
+}

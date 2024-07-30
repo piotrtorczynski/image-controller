@@ -9,15 +9,14 @@ import Foundation
 import UIKit
 @testable import Networking
 
-struct MockImageDownloader: ImageDownloaderProtocol {
-    let result: Result<UIImage, Error>
+class MockImageDownloader: ImageDownloaderProtocol {
+    var downloadImageResult: UIImage?
 
     func downloadImage(from url: URL) async throws -> UIImage {
-        switch result {
-        case .success(let image):
+        if let image = downloadImageResult {
             return image
-        case .failure(let error):
-            throw error
+        } else {
+            throw URLError(.badServerResponse)
         }
     }
 }

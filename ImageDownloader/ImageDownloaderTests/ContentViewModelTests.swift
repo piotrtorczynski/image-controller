@@ -10,54 +10,84 @@ import Networking
 @testable import ImageDownloader
 
 @MainActor
-final class ContentViewModelTests: XCTestCase {
-    func testStartLoading_withImmediateConnection() async throws {
-        let monitor = MockNetworkMonitor(isConnected: true)
-        let downloader = MockImageDownloader(result: .success(UIImage()))
-        let viewModel = ContentViewModel(networkOperationPerformer: NetworkOperationPerformer(networkMonitor: monitor), imageDownloader: downloader)
+class ContentViewModelTests: XCTestCase {
+    var viewModel: ContentViewModel!
+    var networkOperationPerformer: MockNetworkOperationPerformer!
+    var imageDownloader: MockImageDownloader!
 
-        viewModel.startLoading()
-
-        try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay to allow operation to complete
-        XCTAssertTrue(viewModel.state == .image(UIImage()))
+    override func setUp() {
+        super.setUp()
+        networkOperationPerformer = MockNetworkOperationPerformer()
+        imageDownloader = MockImageDownloader()
+        viewModel = ContentViewModel(networkOperationPerformer: networkOperationPerformer, imageDownloader: imageDownloader)
     }
 
-    func testStartLoading_withDelayedConnection() async throws {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let downloader = MockImageDownloader(result: .success(UIImage()))
-        let viewModel = ContentViewModel(networkOperationPerformer: NetworkOperationPerformer(networkMonitor: monitor), imageDownloader: downloader)
-
-        viewModel.startLoading()
+    func testStartLoading_noNetwork() async {
+        networkOperationPerformer.hasInternetConnectionResult = false
+        let expectation = XCTestExpectation(description: "Wait for state change")
 
         Task {
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-            monitor.isConnected = true
+            await viewModel.startLoading()
+            try await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
+            if case .noNetwork = viewModel.state {
+                expectation.fulfill()
+            } else {
+                XCTFail("Expected state to be .noNetwork but got \(viewModel.state)")
+            }
         }
 
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds delay to allow operation to complete
-        XCTAssertTrue(viewModel.state == .image(UIImage()))
+        await fulfillment(of: [expectation], timeout: 1.0)
     }
 
-    func testStartLoading_withTimeout() async {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let downloader = MockImageDownloader(result: .success(UIImage()))
-        let viewModel = ContentViewModel(networkOperationPerformer: NetworkOperationPerformer(networkMonitor: monitor), imageDownloader: downloader)
+    func testStartLoading_withNetwork() async {
+        networkOperationPerformer.hasInternetConnectionResult = true
+        imageDownloader.downloadImageResult = UIImage()
+        let expectation = XCTestExpectation(description: "Wait for state change")
 
-        viewModel.startLoading()
+        Task {
+            await viewModel.startLoading()
+            try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            if case .image = viewModel.state {
+                expectation.fulfill()
+            } else {
+                XCTFail("Expected state to be .image but got \(viewModel.state)")
+            }
+        }
 
-        try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds delay to ensure timeout occurs
-        XCTAssertTrue(viewModel.state == .error("Image download timed out"))
+        await fulfillment(of: [expectation], timeout: 3.0)
+    }
+
+    func testStartLoading_withTimeout() async throws {
+        networkOperationPerformer.hasInternetConnectionResult = true
+        networkOperationPerformer.performNetworkOperationShouldTimeout = true
+        let expectation = XCTestExpectation(description: "Wait for state change")
+
+        try await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds
+        await viewModel.startLoading()
+
+        switch viewModel.state {
+        case .error(let message):
+            XCTAssertTrue(message.contains("timed"))
+        default:
+            XCTFail("Expected state to be .error with timeout message but got \(viewModel.state)")
+        }
+
+        await fulfillment(of: [expectation], timeout: 3.0)
     }
 
     func testCancelLoading() async {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let downloader = MockImageDownloader(result: .success(UIImage()))
-        let viewModel = ContentViewModel(networkOperationPerformer: NetworkOperationPerformer(networkMonitor: monitor), imageDownloader: downloader)
+        let expectation = XCTestExpectation(description: "Wait for state change")
 
-        viewModel.startLoading()
-        viewModel.cancelLoading()
+        Task {
+            await viewModel.startLoading()
+            viewModel.cancelLoading()
+            if case .loading = viewModel.state {
+                expectation.fulfill()
+            } else {
+                XCTFail("Expected state to be .loading but got \(viewModel.state)")
+            }
+        }
 
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay to ensure cancellation takes effect
-        XCTAssertTrue(viewModel.state == .loading) // Assuming the state remains loading after cancellation
+        await fulfillment(of: [expectation], timeout: 1.5)
     }
 }

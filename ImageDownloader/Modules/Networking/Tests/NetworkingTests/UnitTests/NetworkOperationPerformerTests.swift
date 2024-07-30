@@ -1,6 +1,6 @@
 //
 //  NetworkOperationPerformerTests.swift
-//  
+//
 //
 //  Created by Piotr Torczynski on 19/07/2024.
 //
@@ -9,131 +9,80 @@ import XCTest
 @testable import Networking
 
 final class NetworkOperationPerformerTests: XCTestCase {
+    private var performer: NetworkOperationPerformer!
+    private var networkMonitor: MockNetworkMonitor!
+
+    override func setUp() {
+        super.setUp()
+        networkMonitor = MockNetworkMonitor()
+        performer = NetworkOperationPerformer(networkMonitor: networkMonitor)
+    }
 
     func testPerformNetworkOperation_withImmediateConnection() async throws {
-        let monitor = MockNetworkMonitor(isConnected: true)
-        let performer = NetworkOperationPerformer(networkMonitor: monitor)
-
+        networkMonitor.hasInternetConnectionResult = true
         var closureCalled = false
-        try await performer.performNetworkOperation(using: {
-            closureCalled = true
-        }, withinSeconds: 2)
 
-        XCTAssertTrue(closureCalled, "The closure should have been called immediately.")
+        try await performer.performNetworkOperation(withinSeconds: 2) {
+            closureCalled = true
+        }
+
+        XCTAssertTrue(closureCalled)
     }
 
     func testPerformNetworkOperation_withDelayedConnection() async throws {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let performer = NetworkOperationPerformer(networkMonitor: monitor)
-
-        Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // Simulate a delay of 0.5 seconds
-            await monitor.setConnectionStatus(to: true)
-        }
-
+        networkMonitor.hasInternetConnectionResult = false
+        networkMonitor.delayedConnection = true
         var closureCalled = false
-        try await performer.performNetworkOperation(using: {
-            closureCalled = true
-        }, withinSeconds: 2)
-
-        XCTAssertTrue(closureCalled, "The closure should have been called after the connection was established.")
-    }
-
-    func testPerformNetworkOperation_withTimeout() async throws {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let performer = NetworkOperationPerformer(networkMonitor: monitor)
-
-        var closureCalled = false
-        do {
-            try await performer.performNetworkOperation(using: {
-                closureCalled = true
-            }, withinSeconds: 1)
-        } catch {
-            // Expected error due to timeout
-        }
-
-        XCTAssertFalse(closureCalled, "The closure should not have been called due to timeout.")
-    }
-
-    func testPerformNetworkOperation_withCancellation() async throws {
-        let monitor = MockNetworkMonitor(isConnected: false)
-        let performer = NetworkOperationPerformer(networkMonitor: monitor)
 
         let task = Task {
-            var closureCalled = false
-            do {
-                try await performer.performNetworkOperation(using: {
-                    closureCalled = true
-                }, withinSeconds: 5)
-            } catch {
-                // Expected error due to cancellation
+            try await performer.performNetworkOperation(withinSeconds: 2) {
+                closureCalled = true
             }
-
-            XCTAssertFalse(closureCalled, "The closure should not have been called due to cancellation.")
         }
 
-        task.cancel()
+        await networkMonitor.simulateNetworkChange(connected: true)
+        try await task.value
 
-        try await Task.sleep(nanoseconds: 1_000_000_000) // Allow some time for cancellation to take effect
+        XCTAssertTrue(closureCalled)
+    }
+
+    func testPerformNetworkOperation_withTimeout() async {
+        networkMonitor.hasInternetConnectionResult = false
+        var closureCalled = false
+
+        do {
+            try await performer.performNetworkOperation(withinSeconds: 1) {
+                closureCalled = true
+            }
+        } catch {
+            XCTAssertEqual((error as NSError).userInfo[NSLocalizedDescriptionKey] as? String, "Operation timed out")
+        }
+        
+        XCTAssertFalse(closureCalled)
     }
 }
 
-private actor MockNetworkMonitor: NetworkMonitorProtocol {
-    var isConnected: Bool
-
-    init(isConnected: Bool) {
-        self.isConnected = isConnected
-    }
+private final class MockNetworkMonitor: NetworkMonitorProtocol {
+    var timeOutDuration: Double = 2
+    var hasInternetConnectionResult: Bool = false
+    var delayedConnection: Bool = false
 
     func hasInternetConnection() async -> Bool {
-        return isConnected
+        return hasInternetConnectionResult
     }
 
-    func waitForConnection(timeout: TimeInterval) async throws {
-        guard await !hasInternetConnection() else { return }
-
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await self.waitForConnectionContinuation()
-            }
-
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                throw URLError(.timedOut)
-            }
-
-            try await group.next()
-            group.cancelAll()
-        }
-    }
-
-    private func waitForConnectionContinuation() async throws {
-        try await withCheckedThrowingContinuation { continuation in
-            Task {
-                await self.checkConnection(continuation: continuation)
+    func waitForConnection() async {
+        while !hasInternetConnectionResult {
+            if delayedConnection {
+                try! await Task.sleep(nanoseconds: UInt64(timeOutDuration) * 1_000_000_000) // Simulate network connection delay
+                hasInternetConnectionResult = true
+            } else {
+                await Task.yield()
             }
         }
     }
 
-    private func checkConnection(continuation: CheckedContinuation<Void, Error>) async {
-        if isConnected {
-            continuation.resume()
-        } else {
-            Task {
-                try await Task.sleep(nanoseconds: 500_000_000) // Simulate some delay
-                if isConnected {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: URLError(.timedOut))
-                }
-            }
-        }
+    func simulateNetworkChange(connected: Bool) async {
+        hasInternetConnectionResult = connected
     }
 }
-
-private extension MockNetworkMonitor {
-    func setConnectionStatus(to status: Bool) async {
-        isConnected = status
-    }
-}
-

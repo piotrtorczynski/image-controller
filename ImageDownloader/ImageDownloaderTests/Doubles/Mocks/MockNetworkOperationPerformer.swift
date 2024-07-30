@@ -9,27 +9,19 @@ import Foundation
 @testable import Networking
 
 class MockNetworkOperationPerformer: NetworkOperationPerformerProtocol {
-    var hasInternet: Bool
-    var performNetworkOperationCalled: Bool = false
-
-    init(hasInternet: Bool) {
-        self.hasInternet = hasInternet
-    }
+    var hasInternetConnectionResult: Bool = false
+    var performNetworkOperationShouldTimeout: Bool = false
 
     func hasInternetConnection() async -> Bool {
-        return hasInternet
+        return hasInternetConnectionResult
     }
 
-    func performNetworkOperation(using closure: @escaping () async -> Void, withinSeconds timeoutDuration: TimeInterval) async throws {
-        performNetworkOperationCalled = true
-        if hasInternet {
+    func performNetworkOperation(withinSeconds timeoutDuration: TimeInterval, using closure: @escaping () async -> Void) async throws {
+        if performNetworkOperationShouldTimeout {
+            try await Task.sleep(nanoseconds: UInt64(timeoutDuration * 1_000_000_000))
+            throw NSError(domain: "NetworkOperationPerformer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Operation timed out"])
+        } else if hasInternetConnectionResult {
             await closure()
-        } else {
-            throw NetworkError.noInternet
         }
-    }
-
-    enum NetworkError: Error {
-        case noInternet
     }
 }
