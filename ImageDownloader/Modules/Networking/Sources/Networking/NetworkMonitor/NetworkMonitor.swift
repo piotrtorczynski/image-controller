@@ -19,9 +19,7 @@ public actor NetworkMonitor: NetworkMonitorProtocol {
 
     private func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task {
-                await self?.onPathUpdate(path)
-            }
+            Task { await self?.onPathUpdate(path) }
         }
         monitor.start(queue: queue)
     }
