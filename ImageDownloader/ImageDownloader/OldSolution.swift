@@ -8,16 +8,17 @@
 import Foundation
 import Network
 
-public class OldNetworkOperationPerformer {
+private class OldNetworkOperationPerformer {
     private let networkMonitor: NetworkMonitor
     private var timer: Timer?
     private var closure: (() -> Void)?
-    public init() {
+
+    private init() {
         self.networkMonitor = NetworkMonitor()
     }
     /// Attempts to perform a network operation using the given `closure`, within the given `timeoutDuration`.
     /// If the network is not accessible within the given `timeoutDuration`, the operation is not performed.
-    public func performNetworkOperation(
+    private func performNetworkOperation(
         using closure: @escaping () -> Void,
         withinSeconds timeoutDuration: TimeInterval
     ) {

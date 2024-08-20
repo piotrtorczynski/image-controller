@@ -10,6 +10,8 @@ public actor NetworkMonitor: NetworkMonitorProtocol {
     private var monitor: NetworkPathMonitorProtocol
     private let queue = DispatchQueue(label: "NetworkMonitor")
     private var currentStatus: NWPath.Status = .unsatisfied
+    
+    private var continuation: AsyncStream<NWPath>.Continuation?
     private var streamContinuation: AsyncStream<Void>.Continuation?
 
     public init(monitor: NetworkPathMonitorProtocol = NWPathMonitor()) {
@@ -17,11 +19,20 @@ public actor NetworkMonitor: NetworkMonitorProtocol {
         Task { await startMonitoring() }
     }
 
-    private func startMonitoring() {
-        monitor.pathUpdateHandler = { [weak self] path in
-            Task { await self?.onPathUpdate(path) }
+    private func startMonitoring() async {
+        let stream = AsyncStream<NWPath> { continuation in
+            self.continuation = continuation
+            monitor.pathUpdateHandler = { path in
+                continuation.yield(path)
+            }
         }
         monitor.start(queue: queue)
+
+        Task {
+            for await path in stream {
+                await self.notifyCurrentStatus(with: path)
+            }
+        }
     }
 
     public func hasInternetConnection() async -> Bool {
@@ -31,11 +42,9 @@ public actor NetworkMonitor: NetworkMonitorProtocol {
     public func waitForConnection() async throws {
         guard await !hasInternetConnection() else { return }
 
-        let stream: AsyncStream<Void>? = AsyncStream { continuation in
-            streamContinuation = continuation
+        let stream = AsyncStream<Void> { continuation in
+            self.streamContinuation = continuation
         }
-
-        guard let stream = stream else { throw URLError(.cannotFindHost) }
 
         for await _ in stream {
             if await hasInternetConnection() {
@@ -48,10 +57,6 @@ public actor NetworkMonitor: NetworkMonitorProtocol {
 
     private func notifyCurrentStatus(with path: NWPath) async {
         currentStatus = path.status
-    }
-
-    private func onPathUpdate(_ path: NWPath) async {
-        await notifyCurrentStatus(with: path)
         if path.status == .satisfied {
             streamContinuation?.yield()
         }
